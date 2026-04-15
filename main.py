@@ -24,7 +24,7 @@ except:
 # --- CẤU HÌNH ---
 EAR_THRESHOLD = 0.20
 MAR_THRESHOLD = 0.65 
-EYE_CLOSED_SECONDS = 4.0
+EYE_CLOSED_SECONDS = 3.0
 MOUTH_OPEN_SECONDS = 1.0
 
 eye_start_time = None
@@ -50,11 +50,15 @@ cap = cv2.VideoCapture(0)
 
 while cap.isOpened():
     success, frame = cap.read()
-    if not success: break
+    if not success:
+        break
 
     frame = cv2.flip(frame, 1)
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     results = face_mesh.process(rgb_frame)
+
+    status_text = "BINH THUONG"
+    status_color = (0, 255, 0)
 
     if results.multi_face_landmarks:
         for face_landmarks in results.multi_face_landmarks:
@@ -64,32 +68,62 @@ while cap.isOpened():
             avg_ear = (calculate_ratio(coords, LEFT_EYE) + calculate_ratio(coords, RIGHT_EYE)) / 2.0
             mar = calculate_ratio(coords, MOUTH_INNER)
 
-            # draw_bbox(frame, coords, LEFT_EYE, "Eye L", (0, 255, 0))
-            # draw_bbox(frame, coords, RIGHT_EYE, "Eye R", (0, 255, 0))
-            # draw_bbox(frame, coords, MOUTH_INNER, f"Mouth MAR:{mar:.2f}", (0, 255, 255))
-
-            # Logic Cảnh báo Nhắm mắt
+            # --- NGỦ GẬT ---
             if avg_ear < EAR_THRESHOLD:
-                if eye_start_time is None: eye_start_time = time.time()
+                if eye_start_time is None:
+                    eye_start_time = time.time()
+
                 if time.time() - eye_start_time >= EYE_CLOSED_SECONDS:
-                    cv2.putText(frame, "CANH BAO: NGU GAT!", (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+                    status_text = "NGU GAT"
+                    status_color = (0, 0, 255)
+
                     if alert_sound and not pygame.mixer.get_busy():
                         alert_sound.play()
             else:
                 eye_start_time = None
 
-            # Logic Cảnh báo Ngáp
+            # --- NGÁP ---
             if mar > MAR_THRESHOLD:
-                if mouth_start_time is None: mouth_start_time = time.time()
+                if mouth_start_time is None:
+                    mouth_start_time = time.time()
+
                 if time.time() - mouth_start_time >= MOUTH_OPEN_SECONDS:
-                    cv2.putText(frame, "CANH BAO: DANG NGAP!", (50, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 165, 255), 3)
+                    status_text = "MAT TAP TRUNG"
+                    status_color = (0, 165, 255)
             else:
                 mouth_start_time = None
 
-            cv2.putText(frame, f"EAR: {avg_ear:.2f}", (10, 30), 1, 1.2, (255, 255, 0), 2)
+    # ================= UI =================
 
-    cv2.imshow('Drowsiness Detection', frame)
-    if cv2.waitKey(5) & 0xFF == 27: break
+    # Header
+    cv2.rectangle(frame, (0, 0), (640, 50), (30, 30, 30), -1)
+    cv2.putText(frame, "DROWSINESS DETECTION SYSTEM", (120, 35),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+    # Status Box
+    cv2.rectangle(frame, (20, 70), (300, 150), (50, 50, 50), -1)
+    cv2.putText(frame, "STATUS", (30, 95),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 200), 1)
+
+    cv2.putText(frame, status_text, (30, 130),
+                cv2.FONT_HERSHEY_SIMPLEX, 1, status_color, 3)
+
+    # EAR Bar
+    bar_x = int(avg_ear * 300)  # scale
+    cv2.rectangle(frame, (20, 180), (320, 210), (50, 50, 50), -1)
+    cv2.rectangle(frame, (20, 180), (20 + bar_x, 210), (255, 0, 0), -1)
+
+    cv2.putText(frame, f"EAR: {avg_ear:.2f}", (20, 240),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+    
+
+    
+
+    cv2.imshow("Drowsiness Detection Pro", frame)
+
+    if cv2.waitKey(5) & 0xFF == 27:
+        break
 
 cap.release()
 cv2.destroyAllWindows()
