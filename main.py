@@ -2,7 +2,7 @@ import cv2
 import mediapipe as mp
 import time
 from scipy.spatial import distance as dist
-import pygame  # SỬA LỖI 1: Thêm import pygame
+import pygame  
 
 # --- KHỞI TẠO ---
 pygame.mixer.init() # Khởi tạo âm thanh
@@ -14,7 +14,7 @@ face_mesh = mp_face_mesh.FaceMesh(
     min_tracking_confidence=0.5
 )
 
-# SỬA LỖI 2: Đảm bảo có file alert.mp3 trong thư mục
+
 try:
     alert_sound = pygame.mixer.Sound("alert.mp3")
 except:
@@ -22,10 +22,10 @@ except:
     alert_sound = None
 
 # --- CẤU HÌNH ---
-EAR_THRESHOLD = 0.22
+EAR_THRESHOLD = 0.20
 MAR_THRESHOLD = 0.65 
 EYE_CLOSED_SECONDS = 4.0
-MOUTH_OPEN_SECONDS = 2.0
+MOUTH_OPEN_SECONDS = 1.0
 
 eye_start_time = None
 mouth_start_time = None
@@ -64,16 +64,15 @@ while cap.isOpened():
             avg_ear = (calculate_ratio(coords, LEFT_EYE) + calculate_ratio(coords, RIGHT_EYE)) / 2.0
             mar = calculate_ratio(coords, MOUTH_INNER)
 
-            draw_bbox(frame, coords, LEFT_EYE, "Eye L", (0, 255, 0))
-            draw_bbox(frame, coords, RIGHT_EYE, "Eye R", (0, 255, 0))
-            draw_bbox(frame, coords, MOUTH_INNER, f"Mouth MAR:{mar:.2f}", (0, 255, 255))
+            # draw_bbox(frame, coords, LEFT_EYE, "Eye L", (0, 255, 0))
+            # draw_bbox(frame, coords, RIGHT_EYE, "Eye R", (0, 255, 0))
+            # draw_bbox(frame, coords, MOUTH_INNER, f"Mouth MAR:{mar:.2f}", (0, 255, 255))
 
             # Logic Cảnh báo Nhắm mắt
             if avg_ear < EAR_THRESHOLD:
                 if eye_start_time is None: eye_start_time = time.time()
                 if time.time() - eye_start_time >= EYE_CLOSED_SECONDS:
                     cv2.putText(frame, "CANH BAO: NGU GAT!", (50, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
-                    # SỬA LỖI 3: Thêm ngoặc () và kiểm tra để không phát đè âm thanh
                     if alert_sound and not pygame.mixer.get_busy():
                         alert_sound.play()
             else:
